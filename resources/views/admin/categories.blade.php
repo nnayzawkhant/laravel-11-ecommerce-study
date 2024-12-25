@@ -1,9 +1,10 @@
 @extends('layouts.admin')
+
 @section('content')
     <div class="main-content-inner">
         <div class="main-content-wrap">
             <div class="flex items-center flex-wrap justify-between gap20 mb-27">
-                <h3 class="page-title">Brands</h3>
+                <h3 class="page-title">Categories</h3>
                 <ul class="breadcrumbs flex items-center flex-wrap justify-start gap10">
                     <li>
                         <a href="{{ route('admin.index') }}">
@@ -14,7 +15,7 @@
                         <i class="icon-chevron-right"></i>
                     </li>
                     <li>
-                        <div class="text-tiny">Brands</div>
+                        <div class="text-tiny">Categories</div>
                     </li>
                 </ul>
             </div>
@@ -22,7 +23,7 @@
             <div class="wg-box">
                 <div class="flex items-center justify-between gap10 flex-wrap">
                     <div class="wg-filter flex-grow">
-                        <form class="form-search" method="GET" action="{{ route('admin.brands') }}">
+                        <form class="form-search" method="GET" action="{{ route('admin.categories') }}">
                             <fieldset class="name">
                                 <input type="text" placeholder="Search here..." name="name" class="search-input"
                                     value="{{ request('name') }}">
@@ -32,7 +33,7 @@
                             </div>
                         </form>
                     </div>
-                    <a class="tf-button style-1 w208" href="{{ route('admin.brand-add') }}">
+                    <a class="tf-button style-1 w208" href="{{ route('admin.category.add') }}">
                         <i class="icon-plus"></i>Add new
                     </a>
                 </div>
@@ -53,29 +54,25 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse ($brands as $brand)
+                                @forelse ($categories as $category)
                                     <tr>
-                                        <td>{{ $brand->id }}</td>
-                                        <td class="">
-                                            <img src="{{ asset('uploads/brands/' . $brand->image) }}"
-                                                alt="{{ $brand->name }}" class="me-3 rounded-circle" width="30"
-                                                height="30">
-                                            <a href="#" class="text-decoration-none">{{ $brand->name }}</a>
-                                        </td>
-                                        <td>{{ $brand->slug }}</td>
+                                        <td>{{ $category->id }}</td>
+                                        <td>{{ $category->name }}</td>
+                                        <td>{{ $category->slug }}</td>
                                         <td>
-                                            <a href="#" target="_blank">0</a>
+                                            <a href="#" target="_blank">{{ $category->products_count }}</a>
                                         </td>
                                         <td>
                                             <div class="list-icon-function">
-                                                <a href="{{ route('admin.brand.edit', ['id' => $brand->id]) }}">
+                                                <a href="{{ route('admin.category.edit', ['id' => $category->id]) }}">
                                                     <div class="item edit">
                                                         <i class="icon-edit-3"></i>
                                                     </div>
                                                 </a>
+
                                                 <!-- Trigger the Modal for Deletion -->
                                                 <button class="item text-danger"
-                                                    onclick="openDeleteModal({{ $brand->id }})">
+                                                    onclick="openDeleteModal({{ $category->id }})">
                                                     <i class="icon-trash-2"></i>
                                                 </button>
                                             </div>
@@ -83,7 +80,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center">No brands found.</td>
+                                        <td colspan="5" class="text-center">No categories found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -91,13 +88,12 @@
                     </div>
                     <div class="divider"></div>
                     <div class="flex items-center justify-between flex-wrap gap10 wgp-pagination">
-                        {{ $brands->links('pagination::bootstrap-5') }}
+                        {{ $categories->links('pagination::bootstrap-5') }}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
 
     <!-- Delete Confirmation Modal -->
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
@@ -109,7 +105,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Are you sure you want to delete this brand?
+                    Are you sure you want to delete this category?
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -125,10 +121,10 @@
 
     <script>
         // Open the modal and set the action to the form dynamically
-        function openDeleteModal(brandId) {
+        function openDeleteModal(categoryId) {
             // Set the action URL for the delete form
             const deleteForm = document.getElementById('deleteForm');
-            deleteForm.action = '/admin/brands/' + brandId; // Adjust this route as needed
+            deleteForm.action = '/admin/categories/' + categoryId; // Adjust this route as needed
 
             // Show the modal
             const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
