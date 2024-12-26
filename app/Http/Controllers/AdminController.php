@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Product;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -255,4 +256,169 @@ class AdminController extends Controller
 
         return redirect()->route('admin.categories')->with('status', 'Category deleted successfully!');
     }
+
+    // Display all products
+    public function products()
+    {
+        $products = Product::with('category', 'brand')->orderBy('id', 'DESC')->paginate(10);
+        return view('admin.products', compact('products'));
+    }
+
+    // Add new product view
+    public function add_product()
+    {
+        $categories = Category::all();
+        $brands = Brand::all();
+        return view('admin.product.add', compact('categories', 'brands'));
+    }
+
+    public function store_product(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'required|string|unique:products,slug|max:255',
+            'description' => 'required',
+            'regular_price' => 'required|numeric|min:0',
+            'sale_price' => 'nullable|numeric|lte:regular_price|min:0',
+            'SKU' => 'required|string|max:255|unique:products,SKU',
+            'stock_status' => 'required|in:instock,outofstock',
+            'quantity' => 'required|integer|min:0',
+            'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
+            'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
+            'category_id' => 'nullable|exists:categories,id',
+            'brand_id' => 'nullable|exists:brands,id',
+        ]);
+    
+        $product = new Product();
+        $product->fill($request->only([
+            'name', 'slug', 'short_description', 'description', 
+            'regular_price', 'sale_price', 'SKU', 
+            'stock_status', 'featured', 'quantity', 'category_id', 'brand_id'
+        ]));
+    
+        // Handle main image upload
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $fileName = time() . '.' . $image->getClientOriginalExtension();
+            $image->move(public_path('uploads/products'), $fileName);
+            $product->image = $fileName;
+        }
+    
+        // Handle additional images upload
+        if ($request->hasFile('images')) {
+            $images = [];
+            foreach ($request->file('images') as $file) {
+                $fileName = time() . '_' . $file->getClientOriginalName();
+                $file->move(public_path('uploads/products'), $fileName);
+                $images[] = $fileName;
+            }
+            $product->images = json_encode($images);
+        }
+    
+        $product->save();
+    
+        return redirect()->route('admin.products')->with('status', 'Product added successfully!');
+    }
+    
+
+    // Edit product view
+    public function edit_product($id)
+    {
+        $product = Product::findOrFail($id);
+        $categories = Category::all();
+        $brands = Brand::all();
+        return view('admin.products.edit', compact('product', 'categories', 'brands'));
+    }
+
+    public function update_product(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:255',
+            'description' => 'required',
+            'regular_price' => 'required|numeric|min:0',
+            'sale_price' => 'nullable|numeric|lte:regular_price|min:0',
+            'SKU' => 'required|string|max:255|unique:products,SKU,' . $id,
+            'stock_status' => 'required|in:instock,outofstock',
+            'quantity' => 'required|integer|min:0',
+            'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
+            'images.*' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
+            'category_id' => 'nullable|exists:categories,id',
+            'brand_id' => 'nullable|exists:brands,id',
+        ]);
+    
+        $product = Product::findOrFail($id);
+        $product->fill($request->only([
+            'name', 'slug', 'short_description', 'description', 
+            'regular_price', 'sale_price', 'SKU', 
+            'stock_status', 'featured', 'quantity', 'category_id', 'brand_id'
+        ]));
+    
+        // Handle main image upload if exists
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $fileName = time() . '.' . $image->getClientOriginalExtension();
+            $image->move(public_path('uploads/products'), $fileName);
+    
+            // Remove old image if exists
+            if ($product->image && file_exists(public_path('uploads/products/' . $product->image))) {
+                unlink(public_path('uploads/products/' . $product->image));
+            }
+    
+            $product->image = $fileName;
+        }
+    
+        // Handle additional images upload if exists
+        if ($request->hasFile('images')) {
+            $images = [];
+            foreach ($request->file('images') as $file) {
+                $fileName = time() . '_' . $file->getClientOriginalName();
+                $file->move(public_path('uploads/products'), $fileName);
+                $images[] = $fileName;
+            }
+    
+            // Remove old images if exists
+            if ($product->images) {
+                $oldImages = json_decode($product->images);
+                foreach ($oldImages as $oldImage) {
+                    if (file_exists(public_path('uploads/products/' . $oldImage))) {
+                        unlink(public_path('uploads/products/' . $oldImage));
+                    }
+                }
+            }
+    
+            $product->images = json_encode($images);
+        }
+    
+        $product->save();
+    
+        return redirect()->route('admin.products')->with('status', 'Product updated successfully!');
+    }
+    
+
+    // Delete product
+    public function destroy_product($id)
+    {
+        $product = Product::findOrFail($id);
+    
+        // Delete main image if exists
+        if ($product->image && file_exists(public_path('uploads/products/' . $product->image))) {
+            unlink(public_path('uploads/products/' . $product->image));
+        }
+    
+        // Delete additional images if exists
+        if ($product->images) {
+            $images = json_decode($product->images);
+            foreach ($images as $image) {
+                if (file_exists(public_path('uploads/products/' . $image))) {
+                    unlink(public_path('uploads/products/' . $image));
+                }
+            }
+        }
+    
+        $product->delete();
+    
+        return redirect()->route('admin.products')->with('status', 'Product deleted successfully!');
+    }
+    
 }
